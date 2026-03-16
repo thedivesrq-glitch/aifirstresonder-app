@@ -1,0 +1,74 @@
+// This is your Prisma schema file
+// Learn more at: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Post {
+  id          String    @id @default(cuid())
+  title       String?
+  content     String
+  platforms   String    // JSON array of platform names
+  status      String    @default("DRAFT") // DRAFT | SCHEDULED | PUBLISHING | PUBLISHED | FAILED | CANCELLED
+  scheduledAt DateTime?
+  publishedAt DateTime?
+  mediaUrls   String?   // JSON array of media URLs
+  hashtags    String?   // JSON array of hashtags
+  mentions    String?   // JSON array of mentions
+  aiGenerated Boolean   @default(false)
+  tone        String?   // "professional", "casual", "humorous", "inspirational"
+  topic       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  platformPosts PlatformPost[]
+}
+
+model PlatformPost {
+  id          String    @id @default(cuid())
+  postId      String
+  post        Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  platform    String    // e.g. "twitter", "instagram", "linkedin"
+  content     String    // Platform-adapted content
+  status      String    @default("DRAFT") // DRAFT | SCHEDULED | PUBLISHING | PUBLISHED | FAILED | CANCELLED
+  platformId  String?   // ID returned by the platform API after publishing
+  publishedAt DateTime?
+  errorMsg    String?
+  analytics   String?   // JSON: { likes, shares, comments, impressions, reach }
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([postId, platform])
+}
+
+model ScheduledJob {
+  id          String    @id @default(cuid())
+  postId      String    @unique
+  scheduledAt DateTime
+  executed    Boolean   @default(false)
+  executedAt  DateTime?
+  createdAt   DateTime  @default(now())
+}
+
+model SocialAccount {
+  id           String   @id @default(cuid())
+  platform     String
+  username     String
+  displayName  String?
+  accessToken  String?  // Encrypted in production
+  refreshToken String?
+  tokenExpiry  DateTime?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([platform, username])
+}
+
+// PostStatus values: DRAFT | SCHEDULED | PUBLISHING | PUBLISHED | FAILED | CANCELLED
